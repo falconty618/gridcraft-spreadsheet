@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createWorkbook, addSheet, getCell, hydrateWorkbook, mutateStructure, setCellInput } from '../src/core/workbook.js';
 import { recalculateWorkbook } from '../src/core/recalculate.js';
 import { translateFormula } from '../src/core/formula.js';
-import { copyRange, pastePayload } from '../src/core/clipboard.js';
+import { copyRange, moveRange, pastePayload } from '../src/core/clipboard.js';
 import { sortRange } from '../src/core/features.js';
 import { csvToWorkbook, parseCsv, sheetToCsv } from '../src/core/io.js';
 
@@ -75,6 +75,20 @@ test('copy and paste translate formulas while retaining absolute references', ()
   const payload = copyRange(sheet, { startRow: 0, endRow: 0, startCol: 1, endCol: 1 });
   pastePayload(sheet, { row: 1, col: 1 }, payload, true);
   assert.equal(getCell(sheet, 'B2').input, '=A2+$A$1');
+});
+
+test('moving a range preserves formulas and formatting while clearing its source', () => {
+  const workbook = createWorkbook();
+  const sheet = workbook.sheets[0];
+  set(sheet, 'A1', 'Harbor');
+  set(sheet, 'B1', '=A1');
+  sheet.cells.B1.style = { bold: true, background: '#dceae4' };
+  moveRange(sheet, { startRow: 0, endRow: 0, startCol: 0, endCol: 1 }, { row: 1, col: 1 });
+  assert.equal(getCell(sheet, 'A1').input, '');
+  assert.equal(getCell(sheet, 'B1').input, '');
+  assert.equal(getCell(sheet, 'B2').input, 'Harbor');
+  assert.equal(getCell(sheet, 'C2').input, '=A1');
+  assert.deepEqual(getCell(sheet, 'C2').style, { bold: true, background: '#dceae4' });
 });
 
 test('row insertion and deletion update references and expose deleted references', () => {

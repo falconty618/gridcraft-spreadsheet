@@ -49,3 +49,16 @@ export function cutRange(sheet, range) {
   for (const { address } of cellsInRange(range)) delete sheet.cells[address];
   return payload;
 }
+
+export function moveRange(sheet, source, target) {
+  const destination = {
+    startRow: target.row,
+    endRow: target.row + source.endRow - source.startRow,
+    startCol: target.col,
+    endCol: target.col + source.endCol - source.startCol,
+  };
+  if (destination.startRow === source.startRow && destination.startCol === source.startCol) return destination;
+  const payload = cutRange(sheet, source);
+  pastePayload(sheet, target, payload, false);
+  return destination;
+}

@@ -12,7 +12,7 @@ import {
 } from './core/workbook.js';
 import { cellKey, recalculateWorkbook } from './core/recalculate.js';
 import { CommandHistory } from './core/history.js';
-import { copyRange, cutRange, pastePayload, payloadToTsv, tsvToPayload } from './core/clipboard.js';
+import { copyRange, cutRange, moveRange, pastePayload, payloadToTsv, tsvToPayload } from './core/clipboard.js';
 import { translateFormula } from './core/formula.js';
 import { applyFilter, makeTable, refreshDisplays, selectionStats, sortRange, validateInput } from './core/features.js';
 import { csvToWorkbook, downloadText, safeFileName, sheetToCsv } from './core/io.js';
@@ -143,6 +143,23 @@ export default function App() {
       }
     });
     setSelection({ anchor: { row: destination.startRow, col: destination.startCol }, focus: { row: destination.endRow, col: destination.endCol } });
+  };
+
+  const moveSelection = (target) => {
+    if (!target) return;
+    const source = selectedRange;
+    const destination = {
+      startRow: target.row,
+      endRow: target.row + source.endRow - source.startRow,
+      startCol: target.col,
+      endCol: target.col + source.endCol - source.startCol,
+    };
+    if (destination.startRow === source.startRow && destination.startCol === source.startCol) return;
+    apply('Moved cells', (next) => moveRange(getSheet(next, sheet.id), source, target));
+    setSelection({
+      anchor: { row: destination.startRow, col: destination.startCol },
+      focus: { row: destination.endRow, col: destination.endCol },
+    });
   };
 
   const undo = () => {
@@ -288,6 +305,7 @@ export default function App() {
           onCommit={commitCell}
           onClear={clearSelection}
           onFill={fill}
+          onMove={moveSelection}
           onResize={(axis, index, size) => apply(`Resized ${axis}`, (next) => {
             const target = getSheet(next, sheet.id);
             if (axis === 'row') target.rowHeights[index] = size;

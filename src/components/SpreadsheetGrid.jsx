@@ -68,6 +68,7 @@ export default function SpreadsheetGrid({
   onCommit,
   onClear,
   onFill,
+  onMove,
   onResize,
   onCommand,
 }) {
@@ -77,6 +78,7 @@ export default function SpreadsheetGrid({
   const [viewport, setViewport] = useState({ width: 1000, height: 600 });
   const [editor, setEditor] = useState(null);
   const [fillPreview, setFillPreview] = useState(null);
+  const [movePreview, setMovePreview] = useState(null);
 
   const rowLayout = useMemo(() => dimensions(
     MAX_ROWS,
@@ -106,18 +108,33 @@ export default function SpreadsheetGrid({
 
   useEffect(() => {
     const release = () => {
-      if (dragRef.current?.kind === 'fill' && fillPreview) onFill(fillPreview);
+      const drag = dragRef.current;
+      if (drag?.kind === 'fill' && fillPreview) onFill(fillPreview);
+      if (drag?.kind === 'move' && movePreview) onMove({ row: movePreview.startRow, col: movePreview.startCol });
+      if (drag?.kind === 'pending-move') onSelect({ anchor: drag.point, focus: drag.point });
       dragRef.current = null;
       setFillPreview(null);
+      setMovePreview(null);
     };
     window.addEventListener('pointerup', release);
-    return () => window.removeEventListener('pointerup', release);
-  }, [fillPreview, onFill, range]);
+    window.addEventListener('pointercancel', release);
+    return () => {
+      window.removeEventListener('pointerup', release);
+      window.removeEventListener('pointercancel', release);
+    };
+  }, [fillPreview, movePreview, onFill, onMove, onSelect]);
 
   const activate = (row, col, event = {}) => {
     event.preventDefault?.();
     const point = { row, col };
-    if (event.shiftKey) {
+    if (!event.shiftKey && !singleCellSelection && rangeContains(range, row, col)) {
+      dragRef.current = {
+        kind: 'pending-move',
+        point,
+        source: range,
+        offset: { row: row - range.startRow, col: col - range.startCol },
+      };
+    } else if (event.shiftKey) {
       dragRef.current = { kind: 'select', anchor: selection.anchor };
       onSelect({ anchor: selection.anchor, focus: point });
     } else {
@@ -235,6 +252,7 @@ export default function SpreadsheetGrid({
           const active = row === selection.focus.row && col === selection.focus.col;
           const fillAnchor = row === range.endRow && col === range.endCol;
           const fillSelected = fillRange && rangeContains(fillRange, row, col);
+          const moveSelected = movePreview && rangeContains(movePreview, row, col);
           const table = sheet.tables.some((item) => {
             const tableRange = parseRange(item.range);
             return tableRange && rangeContains(tableRange, row, col);
@@ -250,8 +268,15 @@ export default function SpreadsheetGrid({
                 selected && row === range.endRow && 'selection-bottom',
                 selected && col === range.startCol && 'selection-left',
                 selected && col === range.endCol && 'selection-right',
+                selected && !singleCellSelection && 'movable-selection',
+                selected && movePreview && 'moving-source',
                 active && singleCellSelection && 'active',
                 fillSelected && 'fill-preview',
+                moveSelected && 'move-preview',
+                moveSelected && row === movePreview.startRow && 'move-preview-top',
+                moveSelected && row === movePreview.endRow && 'move-preview-bottom',
+                moveSelected && col === movePreview.startCol && 'move-preview-left',
+                moveSelected && col === movePreview.endCol && 'move-preview-right',
                 cell.error && 'error',
                 table && 'table-cell',
               ].filter(Boolean).join(' ')}
@@ -268,6 +293,20 @@ export default function SpreadsheetGrid({
               onPointerEnter={() => {
                 if (dragRef.current?.kind === 'select') onSelect({ anchor: dragRef.current.anchor, focus: { row, col } });
                 if (dragRef.current?.kind === 'fill') setFillPreview({ row, col });
+                if (dragRef.current?.kind === 'pending-move' || dragRef.current?.kind === 'move') {
+                  const drag = dragRef.current;
+                  const height = drag.source.endRow - drag.source.startRow + 1;
+                  const width = drag.source.endCol - drag.source.startCol + 1;
+                  const startRow = Math.min(MAX_ROWS - height, Math.max(0, row - drag.offset.row));
+                  const startCol = Math.min(MAX_COLS - width, Math.max(0, col - drag.offset.col));
+                  dragRef.current = { ...drag, kind: 'move' };
+                  setMovePreview({
+                    startRow,
+                    endRow: startRow + height - 1,
+                    startCol,
+                    endCol: startCol + width - 1,
+                  });
+                }
               }}
               onDoubleClick={() => startEditing(row, col)}
             >
@@ -280,7 +319,7 @@ export default function SpreadsheetGrid({
                   <textarea className="cell-editor" autoFocus value={editor.value} onChange={(event) => setEditor({ ...editor, value: event.target.value })} onBlur={() => finishEditing()} onKeyDown={(event) => { if (event.key === 'Enter' && !event.altKey) { event.preventDefault(); finishEditing(1); } if (event.key === 'Escape') setEditor(null); }} />
                 )
               ) : <span>{cell.display ?? cell.input}</span>}
-              {fillAnchor && !editor && (
+              {fillAnchor && !editor && !movePreview && (
                 <span
                   className="fill-handle"
                   title="Drag to fill"
