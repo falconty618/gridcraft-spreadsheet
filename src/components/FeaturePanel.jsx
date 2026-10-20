@@ -37,7 +37,7 @@ export default function FeaturePanel({ view, onClose, sheet, selection, actions 
 
   if (view === 'find') return (
     <Dialog title="Find and replace" onClose={onClose}>
-      <Field label="Find"><input value={find} onChange={(event) => setFind(event.target.value)} autoFocus /></Field>
+      <Field label="Find"><input value={find} onChange={(event) => setFind(event.target.value)} /></Field>
       <Field label="Replace with"><input value={replace} onChange={(event) => setReplace(event.target.value)} /></Field>
       <div className="button-row"><button className="primary" disabled={!matches.length} onClick={() => actions.findNext(matches)}>Next match</button><button disabled={!matches.length} onClick={() => actions.replace(matches, find, replace)}>Replace</button></div>
       <button className="wide-button" disabled={!matches.length} onClick={() => actions.replaceAll(find, replace)}>Replace all</button>

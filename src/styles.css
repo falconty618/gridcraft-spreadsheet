@@ -26,9 +26,13 @@ button:disabled { cursor: not-allowed; opacity: .42; }
 
 .app-shell {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 58px auto 38px minmax(0, 1fr) 37px 29px;
+  width: 100%;
+  max-width: 100vw;
   height: 100%;
   min-width: 720px;
+  overflow: hidden;
   background: var(--surface);
 }
 
@@ -147,7 +151,15 @@ button:disabled { cursor: not-allowed; opacity: .42; }
 .formula-bar input { height: 100%; padding: 0 8px; border: 0; border-left: 1px solid #edf0ed; outline: none; font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; }
 .formula-bar input:focus { box-shadow: inset 0 -2px var(--accent); }
 
-.workspace { display: flex; min-height: 0; position: relative; background: #e7ebe7; }
+.workspace {
+  display: flex;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #e7ebe7;
+}
 .grid-viewport {
   flex: 1 1 auto;
   position: relative;
@@ -240,10 +252,13 @@ button:disabled { cursor: not-allowed; opacity: .42; }
 .freeze-line.horizontal { height: 2px; right: 0; }
 
 .side-panel {
-  position: absolute;
-  inset: 0 0 0 auto;
+  position: fixed;
+  top: 144px;
+  right: 0;
+  bottom: 66px;
+  left: auto;
   width: min(360px, 92vw);
-  height: 100%;
+  height: auto;
   flex: none;
   overflow: auto;
   background: #fbfcfa;
