@@ -19,12 +19,16 @@ export default function FeaturePanel({ view, onClose, sheet, selection, actions 
   const [validationValue, setValidationValue] = useState('Open, In progress, Done');
   const [name, setName] = useState('');
   const [sortColumn, setSortColumn] = useState(selection.startCol);
+  const [filterColumn, setFilterColumn] = useState(selection.startCol);
   const [sortDirection, setSortDirection] = useState('asc');
   const [filterOperator, setFilterOperator] = useState('contains');
   const [filterValue, setFilterValue] = useState('');
   const [chartType, setChartType] = useState('column');
 
-  useEffect(() => setSortColumn(selection.startCol), [selection.startCol]);
+  useEffect(() => {
+    setSortColumn(selection.startCol);
+    setFilterColumn(selection.startCol);
+  }, [selection.startCol]);
   const matches = useMemo(() => {
     if (!find) return [];
     const lower = find.toLowerCase();
@@ -35,7 +39,7 @@ export default function FeaturePanel({ view, onClose, sheet, selection, actions 
     <Dialog title="Find and replace" onClose={onClose}>
       <Field label="Find"><input value={find} onChange={(event) => setFind(event.target.value)} autoFocus /></Field>
       <Field label="Replace with"><input value={replace} onChange={(event) => setReplace(event.target.value)} /></Field>
-      <div className="button-row"><button className="primary" disabled={!matches.length} onClick={() => actions.findNext(matches)}>Next match</button><button disabled={!matches.length} onClick={() => actions.replace(matches[0], find, replace)}>Replace</button></div>
+      <div className="button-row"><button className="primary" disabled={!matches.length} onClick={() => actions.findNext(matches)}>Next match</button><button disabled={!matches.length} onClick={() => actions.replace(matches, find, replace)}>Replace</button></div>
       <button className="wide-button" disabled={!matches.length} onClick={() => actions.replaceAll(find, replace)}>Replace all</button>
       <p className="panel-note">{find ? `${matches.length} match${matches.length === 1 ? '' : 'es'} in ${sheet.name}` : 'Searches the current worksheet. Workbook-wide search can be added without replacing this subsystem.'}</p>
     </Dialog>
@@ -52,11 +56,11 @@ export default function FeaturePanel({ view, onClose, sheet, selection, actions 
       </section>
       <section><h3>Filter selected records</h3>
         <div className="field-grid">
-          <Field label="Column"><select value={sortColumn} onChange={(event) => setSortColumn(Number(event.target.value))}>{Array.from({ length: selection.endCol - selection.startCol + 1 }, (_, index) => selection.startCol + index).map((col) => <option key={col} value={col}>{indexToColumn(col)}</option>)}</select></Field>
+          <Field label="Column"><select value={filterColumn} onChange={(event) => setFilterColumn(Number(event.target.value))}>{Array.from({ length: selection.endCol - selection.startCol + 1 }, (_, index) => selection.startCol + index).map((col) => <option key={col} value={col}>{indexToColumn(col)}</option>)}</select></Field>
           <Field label="Condition"><select value={filterOperator} onChange={(event) => setFilterOperator(event.target.value)}><option value="contains">Contains</option><option value="equals">Equals</option><option value="notEquals">Does not equal</option><option value="greater">Greater than</option><option value="less">Less than</option></select></Field>
         </div>
         <Field label="Value"><input value={filterValue} onChange={(event) => setFilterValue(event.target.value)} /></Field>
-        <div className="button-row"><button className="primary" onClick={() => actions.filter(sortColumn, filterOperator, filterValue)}>Apply filter</button><button onClick={actions.clearFilters}>Clear filters</button></div>
+        <div className="button-row"><button className="primary" onClick={() => actions.filter(filterColumn, filterOperator, filterValue)}>Apply filter</button><button onClick={actions.clearFilters}>Clear filters</button></div>
       </section>
       <section><h3>Structure</h3>
         <button className="wide-button" onClick={actions.makeTable}>Turn selection into a table</button>

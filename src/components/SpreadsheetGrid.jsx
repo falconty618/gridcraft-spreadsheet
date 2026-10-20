@@ -326,7 +326,7 @@ export default function SpreadsheetGrid({
                   onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); dragRef.current = { kind: 'fill' }; setFillPreview({ row, col }); }}
                 />
               )}
-              {cell.validation?.type === 'list' && !editor && <button className="validation-arrow" title="Choose from list" onClick={(event) => { event.stopPropagation(); startEditing(row, col); }}>#</button>}
+              {cell.validation?.type === 'list' && !editor && <button className="validation-arrow" title="Choose from list" onClick={(event) => { event.stopPropagation(); startEditing(row, col); }}>&#9662;</button>}
             </div>
           );
         }))}

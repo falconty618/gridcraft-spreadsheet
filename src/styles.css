@@ -85,15 +85,29 @@ button:disabled { cursor: not-allowed; opacity: .42; }
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 6px;
   min-height: 48px;
-  padding: 7px 10px;
-  overflow-x: auto;
+  overflow: hidden;
   background: #fbfcfa;
   border-bottom: 1px solid var(--line);
+}
+.toolbar-scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 7px 6px 7px 10px;
+  overflow-x: auto;
   scrollbar-width: thin;
 }
 .toolbar-group { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.panel-tabs {
+  align-self: stretch;
+  padding: 7px 10px 7px 8px;
+  border-left: 1px solid var(--line);
+  background: #fbfcfa;
+  box-shadow: -8px 0 14px rgba(31, 56, 46, .07);
+  z-index: 3;
+}
 .tool-divider { align-self: stretch; width: 1px; margin: 0 3px; background: var(--line); }
 .tool-button, .toolbar select {
   min-height: 30px;

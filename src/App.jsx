@@ -14,7 +14,7 @@ import { cellKey, recalculateWorkbook } from './core/recalculate.js';
 import { CommandHistory } from './core/history.js';
 import { copyRange, cutRange, moveRange, pastePayload, payloadToTsv, tsvToPayload } from './core/clipboard.js';
 import { translateFormula } from './core/formula.js';
-import { applyFilter, makeTable, refreshDisplays, selectionStats, sortRange, validateInput } from './core/features.js';
+import { applyFilter, makeTable, refreshDisplays, replaceText, selectionStats, sortRange, validateInput } from './core/features.js';
 import { csvToWorkbook, downloadText, safeFileName, sheetToCsv } from './core/io.js';
 
 const STORAGE_KEY = 'gridcraft.workbook.v1';
@@ -206,14 +206,15 @@ export default function App() {
       const point = parseAddress(matches[(current + 1) % matches.length]);
       if (point) setSelection({ anchor: point, focus: point });
     },
-    replace: (address, find, replacement) => {
+    replace: (matches, find, replacement) => {
+      const address = matches.includes(activeAddress) ? activeAddress : matches[0];
       if (!address) return;
       const cell = getCell(sheet, address);
-      apply('Replaced match', (next) => setCellInput(getSheet(next, sheet.id), address, String(cell.input).replace(find, replacement)));
+      apply('Replaced match', (next) => setCellInput(getSheet(next, sheet.id), address, replaceText(cell.input, find, replacement)));
     },
     replaceAll: (find, replacement) => apply('Replaced all matches', (next) => {
       const targetSheet = getSheet(next, sheet.id);
-      Object.values(targetSheet.cells).forEach((cell) => { cell.input = String(cell.input ?? '').split(find).join(replacement); });
+      Object.values(targetSheet.cells).forEach((cell) => { cell.input = replaceText(cell.input, find, replacement, true); });
     }),
     sort: (column, direction) => apply('Sorted records', (next) => sortRange(getSheet(next, sheet.id), selectedRange, column, direction, true)),
     filter: (column, operator, value) => apply('Applied filter', (next) => applyFilter(getSheet(next, sheet.id), { range: rangeToA1(selectedRange), column, operator, value })),
@@ -335,7 +336,7 @@ export default function App() {
       />
       <footer className="status-bar">
         <span>{notice}</span>
-        <span className="status-selection">{sheet.name} � {rangeToA1(selectedRange)}</span>
+        <span className="status-selection">{sheet.name} &middot; {rangeToA1(selectedRange)}</span>
         <div className="quick-stats"><span>Count <b>{stats.count}</b></span><span>Sum <b>{stats.sum.toLocaleString(undefined, { maximumFractionDigits: 2 })}</b></span>{stats.average != null && <span>Average <b>{stats.average.toLocaleString(undefined, { maximumFractionDigits: 2 })}</b></span>}</div>
       </footer>
       <input ref={fileInput} hidden type="file" accept=".csv,.json,.gridcraft.json,application/json,text/csv" onChange={handleFile} />

@@ -4,7 +4,9 @@ import { createWorkbook, addSheet, getCell, hydrateWorkbook, mutateStructure, se
 import { recalculateWorkbook } from '../src/core/recalculate.js';
 import { translateFormula } from '../src/core/formula.js';
 import { copyRange, moveRange, pastePayload } from '../src/core/clipboard.js';
-import { sortRange } from '../src/core/features.js';
+import {
+  applyFilter, conditionalStyle, makeTable, replaceText, rowPassesFilters, sortRange, validateInput,
+} from '../src/core/features.js';
 import { csvToWorkbook, parseCsv, sheetToCsv } from '../src/core/io.js';
 
 function set(sheet, address, value) {
@@ -111,6 +113,48 @@ test('sorting moves complete records rather than individual cells', () => {
   sortRange(sheet, { startRow: 0, endRow: 2, startCol: 0, endCol: 1 }, 0, 'asc', true);
   assert.equal(getCell(sheet, 'A2').value, 'Alpha');
   assert.equal(getCell(sheet, 'B2').value, 3);
+});
+
+test('data filters hide only nonmatching records and preserve the header row', () => {
+  const workbook = createWorkbook();
+  const sheet = workbook.sheets[0];
+  [['Name', 'Score'], ['Harbor', 8], ['Islander', 18]].forEach((row, r) => row.forEach((value, c) => set(sheet, String.fromCharCode(65 + c) + (r + 1), value)));
+  recalculateWorkbook(workbook);
+  applyFilter(sheet, { range: 'A1:B3', column: 1, operator: 'greater', value: '10' });
+  assert.equal(rowPassesFilters(sheet, 0), true);
+  assert.equal(rowPassesFilters(sheet, 1), false);
+  assert.equal(rowPassesFilters(sheet, 2), true);
+  sheet.filters = [];
+  assert.equal(rowPassesFilters(sheet, 1), true);
+});
+
+test('rules apply conditional styles and validate list, number, and date inputs', () => {
+  const workbook = createWorkbook();
+  const sheet = workbook.sheets[0];
+  set(sheet, 'A1', 15);
+  recalculateWorkbook(workbook);
+  sheet.conditionalFormats.push({ range: 'A1:A2', operator: 'greater', value: '10', color: '#dff4e8' });
+  assert.equal(conditionalStyle(sheet, 0, 0).background, '#dff4e8');
+  assert.equal(validateInput({ validation: { type: 'list', values: ['Open', 'Done'] } }, 'Done').valid, true);
+  assert.equal(validateInput({ validation: { type: 'list', values: ['Open', 'Done'] } }, 'Other').valid, false);
+  assert.equal(validateInput({ validation: { type: 'number', min: '1', max: '5' } }, '6').valid, false);
+  assert.equal(validateInput({ validation: { type: 'date', min: '2026-01-01', max: '2026-12-31' } }, '2026-06-01').valid, true);
+});
+
+test('table creation styles the header and records the selected range', () => {
+  const workbook = createWorkbook();
+  const sheet = workbook.sheets[0];
+  set(sheet, 'A1', 'Name');
+  set(sheet, 'A2', 'Harbor');
+  makeTable(sheet, 'A1:A2', 'Table1');
+  assert.equal(sheet.tables[0].range, 'A1:A2');
+  assert.equal(getCell(sheet, 'A1').style.bold, true);
+});
+
+test('find and replace is case-insensitive and treats search punctuation literally', () => {
+  assert.equal(replaceText('Harbor HARBOR', 'harbor', 'Port'), 'Port HARBOR');
+  assert.equal(replaceText('Harbor HARBOR', 'harbor', 'Port', true), 'Port Port');
+  assert.equal(replaceText('A1 + A1', 'A1 +', 'Cell'), 'Cell A1');
 });
 
 test('versioned workbooks serialize and hydrate without losing metadata', () => {

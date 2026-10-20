@@ -8,6 +8,14 @@ const compareValues = (a, b) => {
   return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
 };
 
+export function replaceText(input, needle, replacement, replaceAll = false) {
+  const text = String(input ?? '');
+  if (!needle) return text;
+  const escaped = String(needle).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(escaped, replaceAll ? 'gi' : 'i');
+  return text.replace(pattern, () => String(replacement ?? ''));
+}
+
 export function sortRange(sheet, range, column, direction = 'asc', hasHeader = true) {
   const start = range.startRow + (hasHeader ? 1 : 0);
   const rows = [];

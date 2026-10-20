@@ -7,6 +7,7 @@ const Divider = () => <span className="tool-divider" />;
 export default function Toolbar({ actions, style, canUndo, canRedo, view }) {
   return (
     <div className="toolbar" role="toolbar" aria-label="Spreadsheet tools">
+      <div className="toolbar-scroll">
       <div className="toolbar-group file-group">
         <Button title="New workbook" onClick={actions.newWorkbook}>New</Button>
         <Button title="Save a full workbook file" onClick={actions.exportJson}>Save file</Button>
@@ -42,8 +43,8 @@ export default function Toolbar({ actions, style, canUndo, canRedo, view }) {
         <Button title="Delete selected rows" onClick={() => actions.structure('row', 'delete')}>- Row</Button>
         <Button title="Delete selected columns" onClick={() => actions.structure('column', 'delete')}>- Col</Button>
       </div>
-      <Divider />
-      <div className="toolbar-group">
+      </div>
+      <div className="toolbar-group panel-tabs" aria-label="Feature panels">
         <Button title="Open find and replace" active={view === 'find'} onClick={() => actions.panel('find')}>Find</Button>
         <Button title="Sort or filter selected data" active={view === 'data'} onClick={() => actions.panel('data')}>Data</Button>
         <Button title="Validation, named ranges, and conditional rules" active={view === 'rules'} onClick={() => actions.panel('rules')}>Rules</Button>
