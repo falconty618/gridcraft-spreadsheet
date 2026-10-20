@@ -89,6 +89,7 @@ export default function SpreadsheetGrid({
   const rows = useMemo(() => indicesInView(rowLayout, scroll.top, viewport.height, sheet.freeze.rows), [rowLayout, scroll.top, viewport.height, sheet.freeze.rows]);
   const cols = useMemo(() => indicesInView(colLayout, scroll.left, viewport.width, sheet.freeze.cols), [colLayout, scroll.left, viewport.width, sheet.freeze.cols]);
   const range = normalizeRange(selection.anchor, selection.focus);
+  const singleCellSelection = range.startRow === range.endRow && range.startCol === range.endCol;
   const fillRange = fillPreview ? {
     startRow: Math.min(range.startRow, fillPreview.row),
     endRow: Math.max(range.endRow, fillPreview.row),
@@ -114,6 +115,7 @@ export default function SpreadsheetGrid({
   }, [fillPreview, onFill, range]);
 
   const activate = (row, col, event = {}) => {
+    event.preventDefault?.();
     const point = { row, col };
     if (event.shiftKey) {
       dragRef.current = { kind: 'select', anchor: selection.anchor };
@@ -231,6 +233,7 @@ export default function SpreadsheetGrid({
           const frozenCol = col < sheet.freeze.cols;
           const selected = rangeContains(range, row, col);
           const active = row === selection.focus.row && col === selection.focus.col;
+          const fillAnchor = row === range.endRow && col === range.endCol;
           const fillSelected = fillRange && rangeContains(fillRange, row, col);
           const table = sheet.tables.some((item) => {
             const tableRange = parseRange(item.range);
@@ -240,7 +243,18 @@ export default function SpreadsheetGrid({
           return (
             <div
               key={address}
-              className={['grid-cell', selected && 'selected', active && 'active', fillSelected && 'fill-preview', cell.error && 'error', table && 'table-cell'].filter(Boolean).join(' ')}
+              className={[
+                'grid-cell',
+                selected && 'selected',
+                selected && row === range.startRow && 'selection-top',
+                selected && row === range.endRow && 'selection-bottom',
+                selected && col === range.startCol && 'selection-left',
+                selected && col === range.endCol && 'selection-right',
+                active && singleCellSelection && 'active',
+                fillSelected && 'fill-preview',
+                cell.error && 'error',
+                table && 'table-cell',
+              ].filter(Boolean).join(' ')}
               style={{
                 left: ROW_HEADER_WIDTH + colLayout.positions[col] + (frozenCol ? scroll.left : 0),
                 top: COL_HEADER_HEIGHT + rowLayout.positions[row] + (frozenRow ? scroll.top : 0),
@@ -266,11 +280,11 @@ export default function SpreadsheetGrid({
                   <textarea className="cell-editor" autoFocus value={editor.value} onChange={(event) => setEditor({ ...editor, value: event.target.value })} onBlur={() => finishEditing()} onKeyDown={(event) => { if (event.key === 'Enter' && !event.altKey) { event.preventDefault(); finishEditing(1); } if (event.key === 'Escape') setEditor(null); }} />
                 )
               ) : <span>{cell.display ?? cell.input}</span>}
-              {active && !editor && (
+              {fillAnchor && !editor && (
                 <span
                   className="fill-handle"
                   title="Drag to fill"
-                  onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); dragRef.current = { kind: 'fill' }; setFillPreview(selection.focus); }}
+                  onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); dragRef.current = { kind: 'fill' }; setFillPreview({ row, col }); }}
                 />
               )}
               {cell.validation?.type === 'list' && !editor && <button className="validation-arrow" title="Choose from list" onClick={(event) => { event.stopPropagation(); startEditing(row, col); }}>#</button>}
